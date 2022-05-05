@@ -1,4 +1,4 @@
-!/usr/bin/perl
+#!/usr/bin/perl
 
         #
         # my suggestion is to create a directory using your Telnyx profile id
