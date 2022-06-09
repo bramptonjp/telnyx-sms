@@ -39,17 +39,17 @@
                 }
         }
 
-        if( $telnyx == 0 )
-        {
+        #if( $telnyx == 0 )
+        #{
                 #
                 # no Telnyx header, redirect them, this is not a valid connection
                 # it is unlikely we'll ever see this if you use profile id
                 #
 
-                &logit( "connection:" . ${ENV}{'REMOTE_ADDR'} . ":invalid:redirected" );
-                print "Location: https://google.com\n\n";
-                exit;
-        }
+         #      &logit( "connection:" . ${ENV}{'REMOTE_ADDR'} . ":invalid:redirected" );
+         #      print "Location: https://google.com\n\n";
+         #      exit;
+        #}
 
         if( $ENV{REQUEST_METHOD} eq 'POST' )
         {
