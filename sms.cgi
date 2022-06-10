@@ -1,24 +1,17 @@
 #!/usr/bin/perl
 
-        #
-        # my suggestion is to create a directory using your Telnyx profile id
-        # to obfuscate the URL, for example
-        #
-        # https://somedomain.com/4041808a-8911-4a9e-9b5e-70ed906567de/sms.cgi
-        #
-        # It is highly unlikely anyone is going to know the path to sms.cgi
-        #
-
         $| = 1;
 
         use JSON;
         use MIME::Lite;
+        use Data::Dumper;
         use POSIX qw(strftime);
 
         my $timestamp = time();
         my %SMS = ();
         ${SMS}{'date'} = strftime "%Y%m%d%H%M%S", localtime( $timestamp );
-        my $telnyx = 0;
+        ${SMS}{'ip'} = ${ENV}{'REMOTE_ADDR'};
+        my $inbound = 0;
 
         foreach my $name ( keys %ENV )
         {
@@ -28,28 +21,15 @@
                         # found Telnyx header, flag it, parse the date/time from t=
                         #
 
-                        $telnyx = 1;
+                        $inbound = 1;
 
                         if( $ENV{$name} =~ /^t=(.*),h=.*$/ )
                         {
                                 $timestamp = $1;
                                 ${SMS}{'date'} = strftime "%Y%m%d%H%M%S", localtime( $timestamp );
-                                ${SMS}{'ip'} = ${ENV}{'REMOTE_ADDR'};
                         }
                 }
         }
-
-        #if( $telnyx == 0 )
-        #{
-                #
-                # no Telnyx header, redirect them, this is not a valid connection
-                # it is unlikely we'll ever see this if you use profile id
-                #
-
-         #      &logit( "connection:" . ${ENV}{'REMOTE_ADDR'} . ":invalid:redirected" );
-         #      print "Location: https://google.com\n\n";
-         #      exit;
-        #}
 
         if( $ENV{REQUEST_METHOD} eq 'POST' )
         {
@@ -58,16 +38,29 @@
                 read( STDIN, $query, $ENV{CONTENT_LENGTH} );
                 my $data = decode_json( $query );
 
-                ${SMS}{'id'} = $data->{'sms_id'};
-                ${SMS}{'from'} = $data->{'from'};
-                ${SMS}{'to'} = $data->{'to'};
-                ${SMS}{'body'} = $data->{'body'};
+        if( $inbound == 0 )
+        {
+                        #
+                        # outbound confirmation
+                        #
+                        my $logdata = sprintf( "outbound:%s:%s:%s", ${SMS}{'ip'}, ${data}->{data}->{payload}->{to}[0]->{phone_number}, ${data}->{data}->{payload}->{to}[0]->{status} );
+                        &logit( $logdata );
+                }
+                else
+                {
+                        #
+                        # inbound
+                        #
+                        ${SMS}{'id'} = $data->{'sms_id'};
+                        ${SMS}{'from'} = $data->{'from'};
+                        ${SMS}{'to'} = $data->{'to'};
+                        ${SMS}{'body'} = $data->{'body'};
 
-                #
-                # send the SMS as an email
-                #
-
-                &sendmail( %SMS );
+                        #
+                        # send the SMS as an email
+                        #
+                        &sendmail( %SMS );
+                }
         }
 
         #
@@ -84,13 +77,13 @@
         sub sendmail( $ )
         {
                 my ( %sms ) = @_;
+                my %email = ();
+                ${email}{'from'} = 'sms@brampton.net';
+                ${email}{'to'} = "jp" . ${sms}{'to'} . '@brampton.net';
+                ${email}{'subject'} = 'SMS Message Received from ' . ${sms}{'from'};
+
                 my $data = sprintf( "From: %s\nTo: %s\nCreated: %s\n\n%s", ${sms}{'from'}, ${sms}{'to'}, ${sms}{'date'}, ${sms}{'body'} );
                 my $logdata = sprintf( "%s:%s:%s:%s:%s", ${sms}{'ip'}, ${sms}{'id'}, ${sms}{'from'}, ${sms}{'to'}, ${sms}{'date'} );
-
-                my %email = ();
-                ${email}{'from'} = 'sms@yourdomain.com';
-                ${email}{'to'} = 'someuser@yourdomain.com';
-                ${email}{'subject'} = 'SMS Message Received from ' . ${sms}{'from'};
 
                 $msg = MIME::Lite->new(
                                                                 From     => ${email}{'from'},
