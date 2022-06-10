@@ -43,7 +43,7 @@
                         #
                         # outbound confirmation
                         #
-                        my $logdata = sprintf( "outbound:%s:%s:%s", ${SMS}{'ip'}, ${data}->{data}->{payload}->{to}[0]->{phone_number}, ${data}->{data}->{payload}->{to}[0]->{status} );
+                        my $logdata = sprintf( "%s:%s:%s", ${SMS}{'ip'}, ${data}->{data}->{payload}->{to}[0]->{phone_number}, ${data}->{data}->{payload}->{to}[0]->{status} );
                         &logit( $logdata );
                 }
                 else
